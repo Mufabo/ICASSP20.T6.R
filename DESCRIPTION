@@ -8,6 +8,14 @@ Authors@R:
            email = "first.last@example.com",
            comment = c(ORCID = "YOUR-ORCID-ID"))
 Description: What the package does (one paragraph).
-License: What license it uses
+License: MIT
 Encoding: UTF-8
 LazyData: true
+URL: https://github.com/Mufabo/ICASSP20.T6.R
+BugReports: https://github.com/Mufabo/ICASSP20.T6.R/issues
+Suggests: 
+    testthat,
+    knitr,
+    rmarkdown
+RoxygenNote: 6.1.1
+VignetteBuilder: knitr
