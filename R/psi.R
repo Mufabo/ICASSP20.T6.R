@@ -61,7 +61,7 @@ psi_huber <- function(t, r, lst){
 #' @export
 #'
 #' @examples
-pis_t <- function(t, r, nu){
+psi_t <- function(t, r, nu){
   return(.5 * (nu + r) / (nu + t))
 }
 

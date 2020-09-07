@@ -33,16 +33,16 @@ BIC_A <- function(S_est, t, mem, rho, psi, eta){
   epsilon <- numeric(ll)
 
   for (m in 1:ll) {
-    temp_rho[m] <- colSums(rho(t[mem[, m], m]))
-    temp_psi[m] <- colSums(psi(t[mem[, m], m]))
-    temp_eta[m] <- colSums(eta(t[mem[, m], m]))
+    temp_rho[m] <- sum(rho(t[mem[, m], m]))
+    temp_psi[m] <- sum(psi(t[mem[, m], m]))
+    temp_eta[m] <- sum(eta(t[mem[, m], m]))
 
-    logdetS[m] <- log(det(S[,,m]))
+    logdetS[m] <- log(det(S_est[,,m]))
     epsilon[m] <- max(abs(temp_psi[m]), abs(temp_eta[m]), N_m[m])
   }
 
   like <- - sum(temp_rho[temp_rho > 0]) + sum(N_m[N_m > 0] * log(N_m[N_m > 0])) - sum(N_m * logdetS)/2
-  pen <- -0.5 * q * sum(epsilon[epsilon > 0])
+  pen <- -0.5 * q * sum(log(epsilon[epsilon > 0]))
 
   bic <- like + pen
 
@@ -79,8 +79,8 @@ BIC_A <- function(S_est, t, mem, rho, psi, eta){
 BIC_F <- function(data, S_est, mu_est, t, mem, rho, psi, eta){
   N_m <- colSums(mem)
 
-  r <- tensorA::dim(S_est)[1]
-  ll<- tensorA::dim(S_est)[3]
+  r <- dim(S_est)[1]
+  ll<- dim(S_est)[3]
   D <- ICASSP20.T6.R::duplicationMatrix(r)
   q <- 1/2*r*(r+3)
 
@@ -89,11 +89,12 @@ BIC_F <- function(data, S_est, mu_est, t, mem, rho, psi, eta){
   detJ <- numeric(ll)
 
   for (m in 1:ll) {
-    x_hat_m <- t(data[mem[,m], 2:dim(data)[2]]) - mu_est[, m]
+    x_hat_m <- sweep(matrix(t(data[mem[,m], 2:dim(data)[2]]),nrow(mu_est),length(data[mem[,m], 2:dim(data)[2]]), byrow = TRUE)
+                     , 1, mu_est[, m])
     t_m <- t[mem[,m], m]
     J <- FIM_RES(x_hat_m, t_m, S_est[,,m], psi, eta, D);
     detJ[m] <- det(J)
-    temp_rho[m] = sum(rho(t(mem[,m], m)))
+    temp_rho[m] = sum(rho(t[mem[,m], m]))
     logdetS[m] = log(det(S_est[,,m]))
 
     if(detJ[m] < 0){
@@ -149,7 +150,7 @@ BIC_S <- function(S_est, t, mem, rho){
     logdetS[m] <- log(det(S_est[,,m]))
   }
 
-  like <- -sum(temp_rho) + sum(N_m[N_m > 0]) * log(N_m[N_m > 0]) - sum(N_m[N_m > 0] * logdetS[N_m > 0])/2
+  like <- -sum(temp_rho) + sum(N_m[N_m > 0] * log(N_m[N_m > 0])) - sum(N_m[N_m > 0] * logdetS[N_m > 0])/2
   pen <- - q * ll/2 * log(N)
   bic <- like + pen
 

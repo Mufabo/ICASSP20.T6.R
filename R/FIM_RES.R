@@ -16,36 +16,42 @@
 #' @examples
 #'
 FIM_RES <- function(x_hat, t_m, S_est, psi, eta, D){
+  #browser()
   r <- dim(S_est)[1]
   N_m <- length(t_m)
 
   #F_mumu
   temp_eta <- tensorA::to.tensor(0, c(r, r, N_m))
   for(n in 1:N_m){
-    temp_eta[,,n] <- eta(t_m[n]) * x_hat[, n] %o% x_hat[, n]
+    # For whatever reason eta returns a matrix
+    tmp <- if(is.matrix(eta(t_m[n]))) eta(t_m[n])[,]  else eta(t_m[n])
+    temp_eta[,,n] <- tmp * x_hat[, n] %*% t(x_hat[, n])
   }
 
-  F_mumu <- -4 * S_est %\% colSums(temp_eta[,,3]) %/% S_est - S_est %\% diag(1, r, r) * sum(psi(t_m)) * 2
+  F_mumu <- -4 * S_est %\% matSum(temp_eta) %/% S_est - S_est %\% diag(1, r, r) * sum(psi(t_m)) * 2
 
   #F_muS
   temp_eta <- tensorA::to.tensor(0, c(r, r^2, N_m))
 
   for(n in 1:N_m){
-    temp_eta[,, n] <- eta(t_m[n]) * kronecker((S_est%\%x_hat[,n] %o% x_hat[,n]) %/% S_est, t(x_hat[,n]) %/% S_est)
+    tmp <- if(is.matrix(eta(t_m[n]))) eta(t_m[n])[,]  else eta(t_m[n])
+    temp_eta[,, n] <- tmp * kronecker((S_est%\%x_hat[,n] %*% t(x_hat[,n])) %/% S_est, t(x_hat[,n]) %/% S_est)
   }
-  F_muS <- -2 * colSums(temp_eta[,,3]) %*% D
+
+  F_muS <- -2 * matSum(temp_eta) %*% D
 
   F_Smu <- t(F_muS)
 
   #F_SS
   temp_eta <- tensorA::to.tensor(0, c(r^2, r^2, N_m))
   for(n in 1:N_m){
-    temp_eta[,,n] <- eta(t_m[n]) * kronecker((S_est %\% x_hat[,n] %o% x_hat[,n]) %/% S_est, (S_est %\% x_hat[,n] %o% x_hat[,n]) %/% S_est)
+    tmp <- if(is.matrix(eta(t_m[n]))) eta(t_m[n])[,]  else eta(t_m[n])
+    temp_eta[,,n] <- tmp * kronecker((S_est %\% x_hat[,n] %*% t(x_hat[,n])) %/% S_est, (S_est %\% x_hat[,n] %*% t(x_hat[,n])) %/% S_est)
   }
 
-  F_SS <- - t(D) %*% colSums(temp_eta[,,3]) %*% D - N_m / 2 %*% t(D) %*% (kronecker(S_est, S_est) %\% diag(1, r^2, r^2)) %*% D
+  F_SS <- - t(D) %*% matSum(temp_eta) %*% D - N_m / 2 * t(D) %*% (kronecker(S_est, S_est) %\% diag(1, r^2, r^2)) %*% D
 
-  J <- cbind(rbind(-F_mumu, -F_muS), rbind(-F_Smu, -F_SS))
+  J <- rbind(cbind(-F_mumu, -F_muS), cbind(-F_Smu, -F_SS))
 
   # Ensure that J is PSD
   J <- if(det(J) < 0) nearestSPD(J) else J

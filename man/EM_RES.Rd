@@ -5,9 +5,15 @@
 \title{Title}
 \usage{
 EM_RES(data, ll, g, psi, limit = 1e-06, em_max_iter = 200,
-  reg_value = 1e-06)
+  reg_value = 1e-06, test_args = NULL)
 }
 \arguments{
+\item{data}{Matrix[N, r] data without labels}
+
+\item{ll}{scalar, number of clusters}
+
+\item{g}{function(t), gauss}
+
 \item{reg_value}{}
 }
 \description{

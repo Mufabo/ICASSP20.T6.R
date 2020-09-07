@@ -2,13 +2,22 @@
 % Please edit documentation in R/psi.R
 \name{psi_tukey}
 \alias{psi_tukey}
-\title{Title}
+\title{Computes psi(t) of the Tukey loss function}
 \usage{
 psi_tukey(t, cT)
 }
 \arguments{
-\item{cT}{}
+\item{t}{vector[N] squared Mahalanobis distances}
+
+\item{cT}{scalar, tuning parameter}
+}
+\value{
+psi psi of the Tukey loss
 }
 \description{
-Title
+Computes psi(t) of the Tukey loss function
+}
+\examples{
+a <- c(-0.4121757 ,-2.2634588 , 0.2893038,  0.1831577,  0.4861016)
+psi_tukey(a, .3)
 }

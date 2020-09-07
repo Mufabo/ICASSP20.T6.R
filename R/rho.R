@@ -17,7 +17,7 @@
 #' @examples
 #' rho_gaus(rnorm(5), 1)
 rho_gaus <- function(t, r){
-  return(r/2 * log(2*pi) + t/2)
+  return(c(r/2 * log(2*pi) + t/2))
 }
 
 #### rho_huber ####
