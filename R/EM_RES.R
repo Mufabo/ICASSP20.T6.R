@@ -26,7 +26,7 @@ EM_RES <- function(data, ll, g, psi, limit = 1e-6, em_max_iter = 200, reg_value 
 
   ## Initialization using K-means++
   if (is.null(test_args)){
-    tmp <- ClusterR::KMeans_rcpp(data, ll, num_init = 10)
+    tmp <- kmeanspp(data, ll)
     clu_memb_kmeans <- tmp$clusters
     mu_Kmeans <- tmp$centroids
     mu_hat <- t(mu_Kmeans) #stores centroids in columns
@@ -69,7 +69,6 @@ EM_RES <- function(data, ll, g, psi, limit = 1e-6, em_max_iter = 200, reg_value 
 
     # M-step
     for(m in 1:ll){
-
       mu_hat[,m] <- colSums(v_diff[,m] * data) / sum(v_diff[,m])
       S_hat[,,m] <- 2 * (matrix(v_diff[,m], nrow=ncol(data), ncol=nrow(data),byrow = TRUE) * sweep(t(data), 1, mu_hat[,m])) %*% t(sweep(t(data), 1,mu_hat[,m])) / sum(v[,m]) + reg_value * diag(1, r, r)
       tau[m] <- sum(v[,m])/N
@@ -103,7 +102,7 @@ EM_RES <- function(data, ll, g, psi, limit = 1e-6, em_max_iter = 200, reg_value 
     cond_S <- pracma::cond(S_hat[,,m])
     if(cond_S > 30){
       warning("S with large condition number")
-      S_hat[,,m] <- S_hat[,,mn] + 0.01 * 0^floor(log10(trace(S_hat[,,m]))) * log10(cond_S) * diag(1,r,r)
+      S_hat[,,m] <- tensorA::to.matrix.tensor(S_hat[,,m], 1) + 0.01 * 10^floor(log10(sum(diag(S_hat[,,m])))) * log10(cond_S) * diag(1,r,r)
     }
   }
   return(list(mu_hat = mu_hat, S_hat = S_hat, t=t, R=R))

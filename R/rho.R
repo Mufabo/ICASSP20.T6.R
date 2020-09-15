@@ -110,5 +110,6 @@ rho_t <- function(t, r, nu){
 rho_tukey <- function(t, r, cT){
   rho <- numeric(length(t))
   rho[t<=cT^2] <- r/2 * log(2*pi) + t[t<=cT^2]^3 /(6*cT^4) - t[t<=cT^2]^2 /(2*cT^2) + t[t <= cT^2]/2
+  rho[t>cT^2] <- r/2 * log(2*pi) + cT^2/6
   return(rho)
   }

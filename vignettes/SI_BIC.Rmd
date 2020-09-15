@@ -2,15 +2,15 @@
 title: "SI_BIC"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{SI_BIC}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+%\VignetteIndexEntry{SI_BIC}
+%\VignetteEngine{knitr::rmarkdown}
+%\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
+collapse = TRUE,
+comment = "#>"
 )
 ```
 
@@ -26,7 +26,7 @@ MC <- 5 # number of Monte Carlo iterations
 epsilon <- 0.04 # percantage of replacement outliers
 N_k <- 100 # Number of samples per cluster
 
-em_bic <- matrix(c(1,1,2,3,2,4,3,3,3,4),5, 2, byrow = TRUE)
+em_bic <- matrix(c(1,1, 2,2, 2,4, 3,3, 3,4),5, 2, byrow = TRUE)
 embic_iter = nrow(em_bic)
 nu <- 3 # t
 qH <- 0.8 # Huber
@@ -38,7 +38,7 @@ cT <- 4.685 # Tukey
 ```{r}
 tmp <- data_31(N_k, epsilon)
 data <- tmp$data
-labels_true <- tmp$labels_true
+labels_true <- tmp$labels
 r <- tmp$r
 N <- tmp$N
 K_true <- tmp$K_true
@@ -58,26 +58,26 @@ aH <- gamma(r/2)/pi^(r/2) / ( (2*bH)^(r/2)*(gamma(r/2) - pracma::incgam(r/2, cH^
 ## Functional Parameters
 ```{r}
 g <- list(gaus = function(t) g_gaus(t, r),
-            t = function(t) g_t(t, r, nu),
-          huber = function(t) g_huber(t, r, list(cH, bH, aH)))
+        t = function(t) g_t(t, r, nu),
+      huber = function(t) g_huber(t, r, list(cH, bH, aH)))
 
 rho <- list(gaus = function(t) rho_gaus(t, r),
-            t = function(t) rho_t(t, r, nu),
-            huber = function(t) rho_huber(t, r, list(cH, bH, aH)),
-            tukey = function(t) rho_tukey(t, r, cT)
-            )
+        t = function(t) rho_t(t, r, nu),
+        huber = function(t) rho_huber(t, r, list(cH, bH, aH)),
+        tukey = function(t) rho_tukey(t, r, cT)
+        )
 
 psi <- list(gaus = function(t) psi_gaus(t),
-            t = function(t) psi_t(t, r, nu),
-            huber = function(t) psi_huber(t, r, list(cH, bH, aH)),
-            tukey = function(t) psi_tukey(t, cT)
-            )
+        t = function(t) psi_t(t, r, nu),
+        huber = function(t) psi_huber(t, r, list(cH, bH)),
+        tukey = function(t) psi_tukey(t, cT)
+        )
 
 eta <- list(gaus = function(t) eta_gaus(t),
-            t = function(t) eta_t(t, r, nu),
-            huber = function(t) eta_huber(t, r, list(cH, bH, aH)),
-            tukey = function(t) eta_tukey(t, cT)
-            )
+        t = function(t) eta_t(t, r, nu),
+        huber = function(t) eta_huber(t, r, list(cH, bH)),
+        tukey = function(t) eta_tukey(t, cT)
+        )
 
 
 ```
@@ -89,44 +89,52 @@ bic <- tensorA::to.tensor(0, c(MC, L_max, 3, embic_iter))
 like <- tensorA::to.tensor(0, c(MC, L_max, 3, embic_iter))
 pen <- tensorA::to.tensor(0, c(MC, L_max, 3, embic_iter))
 
+oldw <- getOption("warn")
+options(warn = -1)
+
 for(iMC in 1:MC){
- for(ii_embic in 1:embic_iter){
-   for(ll in 1:L_max){
-     # EM
-     tmp <- EM_RES(data, ll, g[[em_bic[ii_embic, 1]]], psi[[em_bic[ii_embic, 1]]])
-     
-     mu_est <- tmp$mu_est
-     S_est <- tmp$S_est
-     t <- tmp$t
-     R <- tmp$R
-     mem <- (R == apply(R, 2, max))
-     
-     # BIC
-     bicf <- BIC_F(data, S_est, mu_est, t, mem, rho[[em_bic[ii_embic, 2]]], psi[[em_bic[ii_embic, 2]]], eta[em_bic[[ii_embic, 2]]])
-     bica <- BIC_A(S_est, t, mem, rho[[em_bic[ii_embic, 2]]], psi[[em_bic[ii_embic, 2]]], eta[[em_bic[ii_embic, 2]]])
-     bics <- BIC_S(S_est, t, mem, rho[[em_bic[ii_embic, 2]]])
-     
-     bic[iMC, ll, , ii_embic] <- c(bicf$bic, bica$bic, bics$bic)
-     like[iMC, ll, , ii_embic] <- c(bicf$like, bica$like, bics$like)
-     pen[iMC, ll, , ii_embic] <- c(bicf$pen, bica$pen, bics$pen)
-   }
- } 
+for(ii_embic in 1:embic_iter){
+for(ll in 1:L_max){
+ sprintf('iMc: %i, ii_embic: %i, ll: %i', iMC, ii_embic, ll)
+
+ # EM
+ tmp <- EM_RES(data, ll, g[[em_bic[ii_embic, 1]]], psi[[em_bic[ii_embic, 1]]])
+ 
+ mu_est <- tmp$mu_hat
+ S_est <- tmp$S_hat
+ t <- tmp$t
+ R <- tmp$R
+ mem <- (R == apply(R, 1, max))
+ 
+ # BIC
+ bicf <- BIC_F(data, S_est, mu_est, t, mem, rho[[em_bic[ii_embic, 2]]], psi[[em_bic[ii_embic, 2]]], eta[[em_bic[ii_embic, 2]]])
+ bica <- BIC_A(S_est, t, mem, rho[[em_bic[ii_embic, 2]]], psi[[em_bic[ii_embic, 2]]], eta[[em_bic[ii_embic, 2]]])
+ bics <- BIC_S(S_est, t, mem, rho[[em_bic[ii_embic, 2]]])
+ 
+ bic[iMC, ll, , ii_embic] <- c(bicf$bic, bica$bic, bics$bic)
+ like[iMC, ll, , ii_embic] <- c(bicf$like, bica$like, bics$like)
+ pen[iMC, ll, , ii_embic] <- c(bicf$pen, bica$pen, bics$pen)
 }
+} 
+}
+
+options(warn = oldw)
 ```
+
 
 # Averaging over MC
 
 ```{r}
-bic_avg <- mean(bic, along = 1)
-pen_avg <- mean(bic, along = 1)
-like_avg <- mean(bic, along = 1)
+bic_avg <- rowMeans(aperm(array(bic, dim(bic)), c(2,3,4,1)), dims=3)
+pen_avg <- rowMeans(aperm(array(pen, dim(bic)), c(2,3,4,1)), dims=3)
+like_avg <- rowMeans(aperm(array(pen, dim(bic)), c(2,3,4,1)), dims=3)
 ```
 
 
 
 # Plots
 ```{r}
-ICASSP20.T6.R::plot_scatter(cbind(labales_true, data), K_true, r)
+ICASSP20.T6.R::plot_scatter(cbind(labels_true, data), K_true, r)
 
 marker = c('o','s','d','*','x','^','v','>','<','p','h', '+','o')
 names = c("Finite", "Asymptotic", "Schwarz")
@@ -136,32 +144,45 @@ g_names = c("Gaus", "t", "Huber", "Tukey")
 ## BIC
 ```{r}
 for(ii_embic in 1:embic_iter){
-  graphics::plot(bic_avg[,,ii_embic], lwd = 1.5, xlab = "number of clusters", ylab = "BIC", marker=marker[ii_embic])
-  graphics::title(paste("Nk:",toString(N_k),", eps:" + toString(epsilon),", EM-", g_names[em_bic[ii_embic,1]], ", BIC-", g_names[em_bic[ii_embic,2]]))
-}
+graphics::matplot(bic_avg[,,ii_embic], lwd = 1.5, xlab = "number of clusters", ylab = "BIC", pch=c("F", "A", "S"), type = 'b', col=4:6)
+graphics::title(paste("Nk:",toString(N_k),", eps:", toString(epsilon),", EM-", g_names[em_bic[ii_embic,1]], ", BIC-", g_names[em_bic[ii_embic,2]]))
+
 
 graphics::grid()
-graphics::legend(legend=names, lty=1:3, cex=0.8)
+graphics::legend("topleft", legend=names, lty=1:3, cex=0.8, col=4:6)
+
+}
+
 ```
 
 ## Likelihood
 ```{r}
-for(ii_embic in 1:embic_iter){
-  graphics::plot(like_avg[,1,ii_embic], lwd = 1.5, xlab = "number of clusters", ylab = "Likelihood", marker=marker[ii_embic])
-  graphics::title(paste("Nk:",toString(N_k),", eps:" + toString(epsilon),", EM-", g_names[em_bic[ii_embic,1]], ", BIC-", g_names[em_bic[ii_embic,2]]))
-}
 
+graphics::matplot(like_avg[,1,], lwd = 1.5, xlab = "number of clusters", ylab = "Likelihood", pch=marker[1:5], type = 'b', col=4:8)
+graphics::title(paste("Nk:",toString(N_k),", eps:", toString(epsilon)))
+
+
+leg_names = c()
+for (i in 1:embic_iter) {
+  leg_names <- c(leg_names, paste("EM-", g_names[em_bic[i, 1]], ", BIC-", g_names[em_bic[i,2]]))
+}
 graphics::grid()
-graphics::legend(legend=names, lty=1:3, cex=0.8)
+graphics::legend("topleft", legend=leg_names, lty=1:5, pch=marker[1:5], cex=0.8, col=4:8)
+
+
+
 ```
 
 ## Penalty
 ```{r}
 for(ii_embic in 1:embic_iter){
-  graphics::plot(pen_avg[,,ii_embic], lwd = 1.5, xlab = "number of clusters", ylab = "Penalty", marker=marker[ii_embic])
-  graphics::title(paste("Nk:",toString(N_k),", eps:" + toString(epsilon),", EM-", g_names[em_bic[ii_embic,1]], ", BIC-", g_names[em_bic[ii_embic,2]]))
-}
+graphics::matplot(pen_avg[,,ii_embic], lwd = 1.5, xlab = "number of clusters", ylab = "Penalty", pch=c("F", "A", "S"), type = 'b', col=4:6)
+graphics::title(paste("Nk:",toString(N_k),", eps:", toString(epsilon),", EM-", g_names[em_bic[ii_embic,1]], ", BIC-", g_names[em_bic[ii_embic,2]]))
+
 
 graphics::grid()
-graphics::legend(legend=names, lty=1:3, cex=0.8)
+graphics::legend("topleft", legend=names, lty=1:3, cex=0.8, col=4:6)
+
+}
+
 ```

@@ -23,7 +23,7 @@ data_31 <- function(N_k, epsilon){
 
   data <- numeric(0)
   for(k in 1:K_true){
-    data <- rbind(data, cbind(rep(1, N_k), MASS::mvrnorm(n = N_k, mu = mu_true[,k], Sigma = scatter_true[,,k])))
+    data <- rbind(data, cbind(rep(1, N_k)*k, MASS::mvrnorm(n = N_k, mu = mu_true[,k], Sigma = scatter_true[,,k])))
   }
 
   # randomly permute data

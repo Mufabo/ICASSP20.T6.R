@@ -14,7 +14,7 @@ LazyData: true
 URL: https://github.com/Mufabo/ICASSP20.T6.R
 BugReports: https://github.com/Mufabo/ICASSP20.T6.R/issues
 Suggests: 
-    testthat,
+    testthat (>= 2.1.0),
     knitr,
     rmarkdown
 RoxygenNote: 6.1.1

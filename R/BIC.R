@@ -46,7 +46,7 @@ BIC_A <- function(S_est, t, mem, rho, psi, eta){
 
   bic <- like + pen
 
-  return(list('bic' = bic, 'pen' = pen, 'like' = like))
+  return(list('bic' = bic, 'like' = like, 'pen' = pen))
 }
 
 #### BIC F ####
@@ -94,6 +94,7 @@ BIC_F <- function(data, S_est, mu_est, t, mem, rho, psi, eta){
     t_m <- t[mem[,m], m]
     J <- FIM_RES(x_hat_m, t_m, S_est[,,m], psi, eta, D);
     detJ[m] <- det(J)
+
     temp_rho[m] = sum(rho(t[mem[,m], m]))
     logdetS[m] = log(det(S_est[,,m]))
 
@@ -154,7 +155,7 @@ BIC_S <- function(S_est, t, mem, rho){
   pen <- - q * ll/2 * log(N)
   bic <- like + pen
 
-  return(list(bic=bic, pen=pen, like=like))
+  return(list(bic=bic, like=like, pen=pen ))
   }
 
 

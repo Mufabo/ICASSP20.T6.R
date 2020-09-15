@@ -9,22 +9,35 @@
 #'
 #' @examples
 plot_scatter <- function(data, K_true, r){
-  for(k in 1:(K_true+1)){
-    if(r == 1){
+  if(r == 1){
+    # data is Nx1
+    graphics::plot.new()
+    graphics::plot.window(c(-20, 20), c(-20, 15))
+    graphics::axis(1)
+    graphics::axis(2)
+    for(k in 1:(K_true+1)){
       if(k == (K_true+1)){
-        graphics::plot(data[data[,1]==k, 2], numeric(sum(data[,1]==k)))
+        graphics::points(data[data[,1]==k, 2], numeric(sum(data[,1]==k)))
       } else {
-        graphics::plot(data[data[,1]==k, 2], numeric(sum(data[,1]==k)), pch = 16)
+        graphics::points(data[data[,1]==k, 2], numeric(sum(data[,1]==k)), pch = 16, col = k+1)
       }
-    } else if(r==2){
-      if(k == (K_true + 1)){
-        graphics::plot(data[data[,1]==k, 2], data[data[,1]==k, 3])
-      } else graphics::plot(data[data[,1]==k, 2], data[data[,1]==k, 3], pch=16)
-    } else if(r==3){
-      if(k == (K_true + 1)){
-        scatterplot3d::scatterplot3d(data[data[,1]==k, 3], data[data[,1]==k, 4])
-      } else scatterplot3d::scatterplot3d(data[data[,1]==k, 3], data[data[,1]==k, 4], pch = 16)
     }
-
   }
+  if(r == 2){
+    # data is Nx1
+    graphics::plot.new()
+    graphics::plot.window(c(-20, 20), c(-20, 15))
+    graphics::axis(1)
+    graphics::axis(2)
+    for(k in 1:(K_true+1)){
+      if(k == (K_true+1)){
+        graphics::points(data[data[,1]==k, 2], data[data[,1]==k, 3])
+      } else {
+        graphics::points(data[data[,1]==k, 2], data[data[,1]==k, 3], pch = 16, col = k+1)
+      }
+    }
+  }
+  if(r == 3){
+    print("Implementation on demand ...")
+    }
 }
