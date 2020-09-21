@@ -2,7 +2,7 @@
 
 #' Computes the BIC of a RES distribution with the asymptotic penalty term
 #'
-#' @param S_est tensorA::tensor[r, r, ll]. Estimated scatter matrix of cluster ll
+#' @param S_est array[r, r, ll]. Estimated scatter matrix of cluster ll
 #' @param t Matrix[N, ll] Squared Mahalanobis distances of data points to cluster centers
 #' @param mem Matrix[N, ll] Cluster memberships
 #' @param rho Vector rho of density generator
@@ -54,7 +54,7 @@ BIC_A <- function(S_est, t, mem, rho, psi, eta){
 #' computes the BIC of a RES distribution based on a finite sample penalty term
 #'
 #' @param data Matrix[N, r] data samples
-#' @param S_est tensorA::Tensor[r, r, ll] Scatter matrices of the clusters
+#' @param S_est array[r, r, ll] Scatter matrices of the clusters
 #' @param mu_est Matrix[r, ll] estimated mean vectors of all clusters
 #' @param t Matrix[N, ll] Squared Mahalanobis distances to cluster centers
 #' @param mem Matrix[N, ll] cluster memberships
@@ -122,17 +122,27 @@ BIC_F <- function(data, S_est, mu_est, t, mem, rho, psi, eta){
 
 #### BIC S ####
 
-#' Title
+#' computes the BIC of a RES distribution with Schwarz Penalty Term
 #'
-#' @param S_est
-#' @param t
-#' @param mem
-#' @param rho
+#' @param S_est array[r, r, ll] Scatter matrices of the clusters
+#' @param t Matrix[N, ll] Squared Mahalanobis distances to cluster centers
+#' @param mem Matrix[N, ll] cluster memberships
+#' @param rho Vector rho of density generator
 #'
-#' @return
+#' @return list
+#' \enumerate{
+#' \item bic
+#' \item pen : Penalty term
+#' \item like : Likelihood term
+#'}
+#' @note
+#'
+#'
+#' "Robust M-Estimation based Bayesian Cluster Enumeration for Real Elliptically Symmetric Distributions"
+#' Christian A. Schroth and Michael Muma, Signal Processing Group, Technische UniversitÃ¤t Darmstadt
+#' submitted to IEEE Transactions on Signal Processing
+#'
 #' @export
-#'
-#' @examples
 BIC_S <- function(S_est, t, mem, rho){
   N_m <- colSums(mem)
   r <- dim(S_est)[1]

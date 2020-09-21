@@ -9,7 +9,7 @@ eta_huber(t, r, lst = list())
 \arguments{
 \item{t}{Vector. Squared Mahalanobis distances}
 
-\item{r}{Scalar. Dimension}
+\item{r}{int. Dimension}
 
 \item{lst}{List. Either empty, Contains field qH or the fields cH and bH. Default is set to empty}
 }

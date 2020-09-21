@@ -1,7 +1,7 @@
 #' Computes eta(t) of the Gaussian distribution
 #'
-#' @param t vector of length N. Squared Mahalanobis distances
-#' @return vector of length N. eta of a Gaussian distribution
+#' @param t vector[N]. Squared Mahalanobis distances
+#' @return vector[N]. eta of a Gaussian distribution
 #'
 #' @examples
 #'
@@ -13,7 +13,7 @@ eta_gaus <- function(t) return(numeric(length(t)))
 #' Computes eta(t) of the Huber distribution
 #'
 #' @param t Vector. Squared Mahalanobis distances
-#' @param r Scalar. Dimension
+#' @param r int. Dimension
 #' @param lst List. Either empty, Contains field qH or the fields cH and bH. Default is set to empty
 #'
 #' @return eta of the Huber distribution
@@ -55,9 +55,9 @@ eta_huber <- function(t, r, lst=list()){
 
 #'Computes eta(t) of the t distribution
 #'
-#' @param t Vector of length N. Squared Mahalanobis distances
-#' @param r Scalar. Dimension
-#' @param nu Scalar. Degree of Freedom
+#' @param t Vector. Squared Mahalanobis distances
+#' @param r int. Dimension
+#' @param nu int. Degree of Freedom
 #'
 #' @return eta(t) of the t distribution
 #'

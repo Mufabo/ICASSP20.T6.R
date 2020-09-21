@@ -2,7 +2,7 @@
 % Please edit documentation in R/EM_RES.R
 \name{EM_RES}
 \alias{EM_RES}
-\title{Title}
+\title{EM algorithm for mixture of RES distributions defined by g, psi}
 \usage{
 EM_RES(data, ll, g, psi, limit = 1e-06, em_max_iter = 200,
   reg_value = 1e-06, test_args = NULL)
@@ -16,6 +16,27 @@ EM_RES(data, ll, g, psi, limit = 1e-06, em_max_iter = 200,
 
 \item{reg_value}{}
 }
+\value{
+list
+\enumerate{
+\item mu_hat matrix[r, ll] Estimate of cluster centers
+\item S_hat array[r, r, ll] Estimate of cluster scatter matrices
+\item t matrix[N, ll] Squared Mahalanobis distances of each point to each cluster
+\item R matrix[N, ll] Estimate of the posterior probabilites per cluster.
+}
+}
 \description{
-Title
+EM algorithm for mixture of RES distributions defined by g, psi
+}
+\references{
+\enumerate{
+\item F. K. Teklehaymanot, M. Muma, and A. M. Zoubir, "Bayesian Cluster Enumeration Criterion for Unsupervised Learning",
+    IEEE Trans. Signal Process. (accepted),
+    [Online-Edition: https://arxiv.org/abs/1710.07954v2], 2018.
+
+\item F. K. Teklehaymanot, M. Muma, and A. M. Zoubir, "Novel Bayesian Cluster
+    Enumeration Criterion for Cluster Analysis With Finite Sample Penalty Term",
+    in Proc. 43rd IEEE Int. conf. on Acoustics, Speech and Signal Process. (ICASSP), pp. 4274-4278, 2018,
+    [Online-Edition: https://www.researchgate.net/publication/322918028]
+}
 }

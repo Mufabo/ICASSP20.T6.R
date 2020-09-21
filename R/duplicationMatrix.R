@@ -2,7 +2,7 @@
 
 #' The duplication matrix
 #'
-#' @param num_features Number of features
+#' @param num_features int. Number of features
 #'
 #' @return dupmat Matrix[num_features^2, .5*num_features*(num_features+1)] The duplication matrix
 #'

@@ -25,6 +25,3 @@ J Matrix[q, q] FIM
 \description{
 computes FIM of one cluster for a given RES distribution
 }
-\examples{
-
-}

@@ -7,11 +7,11 @@
 eta_t(t, r, nu)
 }
 \arguments{
-\item{t}{Vector of length N. Squared Mahalanobis distances}
+\item{t}{Vector. Squared Mahalanobis distances}
 
-\item{r}{Scalar. Dimension}
+\item{r}{int. Dimension}
 
-\item{nu}{Scalar. Degree of Freedom}
+\item{nu}{int. Degree of Freedom}
 }
 \value{
 eta(t) of the t distribution

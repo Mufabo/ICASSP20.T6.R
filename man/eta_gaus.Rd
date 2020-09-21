@@ -7,10 +7,10 @@
 eta_gaus(t)
 }
 \arguments{
-\item{t}{vector of length N. Squared Mahalanobis distances}
+\item{t}{vector[N]. Squared Mahalanobis distances}
 }
 \value{
-vector of length N. eta of a Gaussian distribution
+vector[N]. eta of a Gaussian distribution
 }
 \description{
 Computes eta(t) of the Gaussian distribution

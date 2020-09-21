@@ -85,9 +85,9 @@ eta <- list(gaus = function(t) eta_gaus(t),
 
 # Cluster enumeration
 ```{r}
-bic <- tensorA::to.tensor(0, c(MC, L_max, 3, embic_iter))
-like <- tensorA::to.tensor(0, c(MC, L_max, 3, embic_iter))
-pen <- tensorA::to.tensor(0, c(MC, L_max, 3, embic_iter))
+bic <- array(0, c(MC, L_max, 3, embic_iter))
+like <- array(0, c(MC, L_max, 3, embic_iter))
+pen <- array(0, c(MC, L_max, 3, embic_iter))
 
 oldw <- getOption("warn")
 options(warn = -1)
@@ -125,9 +125,9 @@ options(warn = oldw)
 # Averaging over MC
 
 ```{r}
-bic_avg <- rowMeans(aperm(array(bic, dim(bic)), c(2,3,4,1)), dims=3)
-pen_avg <- rowMeans(aperm(array(pen, dim(bic)), c(2,3,4,1)), dims=3)
-like_avg <- rowMeans(aperm(array(pen, dim(bic)), c(2,3,4,1)), dims=3)
+bic_avg <- rowMeans(aperm(bic, c(2,3,4,1)), dims=3)
+pen_avg <- rowMeans(aperm(pen, c(2,3,4,1)), dims=3)
+like_avg <- rowMeans(aperm(like, c(2,3,4,1)), dims=3)
 ```
 
 
@@ -144,12 +144,12 @@ g_names = c("Gaus", "t", "Huber", "Tukey")
 ## BIC
 ```{r}
 for(ii_embic in 1:embic_iter){
-graphics::matplot(bic_avg[,,ii_embic], lwd = 1.5, xlab = "number of clusters", ylab = "BIC", pch=c("F", "A", "S"), type = 'b', col=4:6)
+graphics::matplot(bic_avg[,,ii_embic], lwd = 1.5, xlab = "number of clusters", ylab = "BIC", pch=c("F", "A", "S"), type = 'b', col=1:3)
 graphics::title(paste("Nk:",toString(N_k),", eps:", toString(epsilon),", EM-", g_names[em_bic[ii_embic,1]], ", BIC-", g_names[em_bic[ii_embic,2]]))
 
 
 graphics::grid()
-graphics::legend("topleft", legend=names, lty=1:3, cex=0.8, col=4:6)
+graphics::legend("topleft", legend=names, lty=1:3, cex=0.8, col=1:3)
 
 }
 
@@ -158,7 +158,7 @@ graphics::legend("topleft", legend=names, lty=1:3, cex=0.8, col=4:6)
 ## Likelihood
 ```{r}
 
-graphics::matplot(like_avg[,1,], lwd = 1.5, xlab = "number of clusters", ylab = "Likelihood", pch=marker[1:5], type = 'b', col=4:8)
+graphics::matplot(like_avg[,1,], lwd = 1.5, xlab = "number of clusters", ylab = "Likelihood", pch=marker[1:5], type = 'b', col=1:5)
 graphics::title(paste("Nk:",toString(N_k),", eps:", toString(epsilon)))
 
 
@@ -167,7 +167,7 @@ for (i in 1:embic_iter) {
   leg_names <- c(leg_names, paste("EM-", g_names[em_bic[i, 1]], ", BIC-", g_names[em_bic[i,2]]))
 }
 graphics::grid()
-graphics::legend("topleft", legend=leg_names, lty=1:5, pch=marker[1:5], cex=0.8, col=4:8)
+graphics::legend("topleft", legend=leg_names, lty=1:5, pch=marker[1:5], cex=0.8, col=1:5)
 
 
 
@@ -176,12 +176,12 @@ graphics::legend("topleft", legend=leg_names, lty=1:5, pch=marker[1:5], cex=0.8,
 ## Penalty
 ```{r}
 for(ii_embic in 1:embic_iter){
-graphics::matplot(pen_avg[,,ii_embic], lwd = 1.5, xlab = "number of clusters", ylab = "Penalty", pch=c("F", "A", "S"), type = 'b', col=4:6)
+graphics::matplot(pen_avg[,,ii_embic], lwd = 1.5, xlab = "number of clusters", ylab = "Penalty", pch=c("F", "A", "S"), type = 'b', col=1:3)
 graphics::title(paste("Nk:",toString(N_k),", eps:", toString(epsilon),", EM-", g_names[em_bic[ii_embic,1]], ", BIC-", g_names[em_bic[ii_embic,2]]))
 
 
 graphics::grid()
-graphics::legend("topleft", legend=names, lty=1:3, cex=0.8, col=4:6)
+graphics::legend("topleft", legend=names, lty=1:3, cex=0.8, col=1:3)
 
 }
 

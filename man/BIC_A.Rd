@@ -7,7 +7,7 @@
 BIC_A(S_est, t, mem, rho, psi, eta)
 }
 \arguments{
-\item{S_est}{tensorA::tensor[r, r, ll]. Estimated scatter matrix of cluster ll}
+\item{S_est}{array[r, r, ll]. Estimated scatter matrix of cluster ll}
 
 \item{t}{Matrix[N, ll] Squared Mahalanobis distances of data points to cluster centers}
 

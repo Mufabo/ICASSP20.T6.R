@@ -2,13 +2,32 @@
 % Please edit documentation in R/BIC.R
 \name{BIC_S}
 \alias{BIC_S}
-\title{Title}
+\title{computes the BIC of a RES distribution with Schwarz Penalty Term}
 \usage{
 BIC_S(S_est, t, mem, rho)
 }
 \arguments{
-\item{rho}{}
+\item{S_est}{array[r, r, ll] Scatter matrices of the clusters}
+
+\item{t}{Matrix[N, ll] Squared Mahalanobis distances to cluster centers}
+
+\item{mem}{Matrix[N, ll] cluster memberships}
+
+\item{rho}{Vector rho of density generator}
+}
+\value{
+list
+\enumerate{
+\item bic
+\item pen : Penalty term
+\item like : Likelihood term
+}
 }
 \description{
-Title
+computes the BIC of a RES distribution with Schwarz Penalty Term
+}
+\note{
+"Robust M-Estimation based Bayesian Cluster Enumeration for Real Elliptically Symmetric Distributions"
+Christian A. Schroth and Michael Muma, Signal Processing Group, Technische UniversitÃ¤t Darmstadt
+submitted to IEEE Transactions on Signal Processing
 }

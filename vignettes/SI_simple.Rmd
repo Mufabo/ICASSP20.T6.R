@@ -1,0 +1,137 @@
+---
+title: "SI_simple"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{SI_simple}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(ICASSP20.T6.R)
+library(zeallot)
+```
+
+# User Input
+```{r}
+em_bic <- matrix(c(1,1, 2,2, 2,4, 3,3, 3,4),5, 2, byrow = TRUE)
+
+nu <- 3 # t
+qH <- 0.8 # Huber
+cT <- 4.685 # Tukey
+
+epsilon <- 0.15
+N_k <- 250
+c(data, labels, r, N, K_true, mu_true, S_true) %<-% data_31(N_k, epsilon)
+L_max <- 2 * K_true
+
+```
+
+# Model Definitions
+
+```{r}
+cH <- sqrt(stats::qchisq(qH, r))
+bH <- stats::pchisq(cH^2, r+2) + cH^2/r*(1-stats::pchisq(cH^2, r))
+aH <- gamma(r/2)/pi^(r/2) / ( (2*bH)^(r/2)*(gamma(r/2) - pracma::incgam(r/2, cH^2/(2*bH))) + (2*bH*cH^2*exp(-cH^2/(2*bH)))/(cH^2 - bH * r))
+
+g <- list(gaus = function(t) g_gaus(t, r),
+        t = function(t) g_t(t, r, nu),
+      huber = function(t) g_huber(t, r, list(cH, bH, aH)))
+
+rho <- list(gaus = function(t) rho_gaus(t, r),
+        t = function(t) rho_t(t, r, nu),
+        huber = function(t) rho_huber(t, r, list(cH, bH, aH)),
+        tukey = function(t) rho_tukey(t, r, cT)
+        )
+
+psi <- list(gaus = function(t) psi_gaus(t),
+        t = function(t) psi_t(t, r, nu),
+        huber = function(t) psi_huber(t, r, list(cH, bH)),
+        tukey = function(t) psi_tukey(t, cT)
+        )
+
+eta <- list(gaus = function(t) eta_gaus(t),
+        t = function(t) eta_t(t, r, nu),
+        huber = function(t) eta_huber(t, r, list(cH, bH)),
+        tukey = function(t) eta_tukey(t, cT)
+        )
+```
+
+```{r}
+embic_iter <- dim(em_bic)[1]
+S_est <- matrix(list(), L_max, embic_iter)
+mu_est <- matrix(list(), L_max, embic_iter)
+
+bic <- array(0, c(L_max, 3, embic_iter))
+pen <- array(0, c(L_max, 3, embic_iter))
+like <- array(0, c(L_max, 3, embic_iter))
+
+for(ii_embic in 1:embic_iter){
+  for(ll in 1:L_max){
+    # EM
+    c(mu_est[[ll, ii_embic]], S_est[[ll, ii_embic]], t, R) %<-% EM_RES(data, ll, g[[em_bic[ii_embic, 1]]]
+                                                                       , psi[[em_bic[ii_embic, 1]]])
+    
+    mem <- R == apply(R, 1, max)
+    
+    c(bic[ll, 1, ii_embic], like[ll, 1, ii_embic], pen[ll, 1, ii_embic]) %<-% BIC_F(data
+                                                                                    , S_est[[ll, ii_embic]]
+                                                                                    , mu_est[[ll, ii_embic]]
+                                                                                    , t
+                                                                                    , mem
+                                                                                    , rho[[em_bic[ii_embic, 2]]]
+                                                                                    , psi[[em_bic[ii_embic, 2]]]
+                                                                                    , eta[[em_bic[ii_embic, 2]]])
+    
+    c(bic[ll, 2, ii_embic], like[ll, 2, ii_embic], pen[ll, 2, ii_embic]) %<-% BIC_A(S_est[[ll, ii_embic]]
+                                                                                    , t
+                                                                                    , mem
+                                                                                    , rho[[em_bic[ii_embic, 2]]]
+                                                                                    , psi[[em_bic[ii_embic, 2]]]
+                                                                                    , eta[[em_bic[ii_embic, 2]]] 
+                                                                                    )
+    
+    c(bic[ll, 2, ii_embic], like[ll, 2, ii_embic], pen[ll, 2, ii_embic]) %<-% BIC_A(S_est[[ll, ii_embic]]
+                                                                                    , t
+                                                                                    , mem
+                                                                                    , rho[[em_bic[ii_embic, 2]]]
+                                                                                    )
+  }
+}
+```
+
+# Plots
+```{r}
+x <- seq(-20, 20, .1)
+y <- seq(-20, 20, .1)
+c(X, Y) %<-% pracma::meshgrid(x, y)
+
+names = c("Finite", "Asymptotic", "Schwarz")
+g_names = c("Gaus", "t", "Huber", "Tukey")
+
+for(ii_embic in 1:embic_iter){
+    graphics::par(mfrow=c(1, 2))
+    plot_scatter(cbind(labels, data), K_true, r)
+    
+    for(m in 1:K_true){
+      Z <- Rfast::dmvnorm(cbind(c(grd$X), c(grd$Y)), mu_est[[ K_true, ii_embic]][, m], S_est[[K_true, ii_embic]][,,m])
+      Z <- pracma::Reshape(Z, dim(grd$X)[1], dim(grd$X)[2])
+      graphics::contour(x, y, t(Z), col = grDevices::rainbow(12), add = TRUE)
+    }
+    
+    graphics::title(main = paste("EM: ", g_names[em_bic[ii_embic, 1]], " at K = ", toString(K_true))
+                    , xlab = "Feature 1"
+                    , ylab = "Feature 2")
+    
+    
+    
+}
+```
+

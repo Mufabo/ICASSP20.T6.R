@@ -9,7 +9,7 @@ BIC_F(data, S_est, mu_est, t, mem, rho, psi, eta)
 \arguments{
 \item{data}{Matrix[N, r] data samples}
 
-\item{S_est}{tensorA::Tensor[r, r, ll] Scatter matrices of the clusters}
+\item{S_est}{array[r, r, ll] Scatter matrices of the clusters}
 
 \item{mu_est}{Matrix[r, ll] estimated mean vectors of all clusters}
 

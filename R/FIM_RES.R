@@ -13,7 +13,6 @@
 #' @return J Matrix[q, q] FIM
 #' @export
 #'
-#' @examples
 #'
 FIM_RES <- function(x_hat, t_m, S_est, psi, eta, D){
   #browser()
@@ -21,7 +20,7 @@ FIM_RES <- function(x_hat, t_m, S_est, psi, eta, D){
   N_m <- length(t_m)
 
   #F_mumu
-  temp_eta <- tensorA::to.tensor(0, c(r, r, N_m))
+  temp_eta <- array(0, c(r, r, N_m))
   for(n in 1:N_m){
     # For whatever reason eta returns a matrix
     tmp <- if(is.matrix(eta(t_m[n]))) eta(t_m[n])[,]  else eta(t_m[n])
@@ -31,7 +30,7 @@ FIM_RES <- function(x_hat, t_m, S_est, psi, eta, D){
   F_mumu <- -4 * S_est %\% matSum(temp_eta) %/% S_est - S_est %\% diag(1, r, r) * sum(psi(t_m)) * 2
 
   #F_muS
-  temp_eta <- tensorA::to.tensor(0, c(r, r^2, N_m))
+  temp_eta <- array(0, c(r, r^2, N_m))
 
   for(n in 1:N_m){
     tmp <- if(is.matrix(eta(t_m[n]))) eta(t_m[n])[,]  else eta(t_m[n])
@@ -43,7 +42,7 @@ FIM_RES <- function(x_hat, t_m, S_est, psi, eta, D){
   F_Smu <- t(F_muS)
 
   #F_SS
-  temp_eta <- tensorA::to.tensor(0, c(r^2, r^2, N_m))
+  temp_eta <- array(0, c(r^2, r^2, N_m))
   for(n in 1:N_m){
     tmp <- if(is.matrix(eta(t_m[n]))) eta(t_m[n])[,]  else eta(t_m[n])
     temp_eta[,,n] <- tmp * kronecker((S_est %\% x_hat[,n] %*% t(x_hat[,n])) %/% S_est, (S_est %\% x_hat[,n] %*% t(x_hat[,n])) %/% S_est)

@@ -7,7 +7,7 @@
 duplicationMatrix(num_features)
 }
 \arguments{
-\item{num_features}{Number of features}
+\item{num_features}{int. Number of features}
 }
 \value{
 dupmat Matrix[num_features^2, .5*num_features*(num_features+1)] The duplication matrix

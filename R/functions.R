@@ -1,40 +1,49 @@
 #### helper ####
 
+
+# See pracma::mldivide
 '%\\%' <- function(A, B) pracma::mldivide(A, B)
 
+
+# See pracma::mrdivide
 '%/%' <- function(A, B) pracma::mrdivide(A, B)
 
 #' sum of matrices of a rank 3 tensor
 #'
-#' @param tensor
+#' @param tensor 3darray
 #'
-#' @return
+#' @return  Sum of matrices in tensor
 #' @export
 #'
-#' @examples
 matSum <- function(tensor){
   return(Reduce('+', comprehenr::to_list(for (i in 1:dim(tensor)[3]) tensor[,,i])))
 }
 
-#' Title
+#' Kmeans with kmeans++ initialization and cityblock distance
 #'
-#' @param data
-#' @param ll
-#' @param iter
-#' @param rep
+#' @param data matrix. Data
+#' @param ll int. Number of clusters
+#' @param iter int. Number of iterations
+#' @param rep int. Number of replications
 #'
-#' @return
+#' @return list
+#' \enumerate{
+#' \item centroids matrix. Cluster centers
+#' \item clusters vector. Cluster membership of data samples
+#' }
 #' @export
 #'
 #' @examples
-kmeanspp <- function(data, ll, iter = 25, rep = 5){
+kmeanspp <- function(data, ll, iter = 25, rep = 50){
   best <- NULL
   for(i in 1:rep){
-    init_centers <- ClusterR::KMeans_rcpp(data, ll)$centroids
-    # Remove NaN's from init_centers
-    init_centers[is.nan(init_centers)] <- 0
-    km <- amap::Kmeans(data, init_centers, iter.max = iter, method="manhattan")
-    if(is.null(best) || sum(km$withinss) < sum(best$withinss)) best <- km
+    set.seed(123)
+    init_centers <- LICORS::kmeanspp(data, k= ll)
+    km <- amap::Kmeans(data, init_centers$centers, method="manhattan")
+    # To avoid empty cluster, only accept solutions where each cluster has
+    # been allocated at least one member
+    if(is.null(best) || sum(km$withinss) < sum(best$withinss) &
+       !(any(is.na(km$centers)) | any(is.nan(km$centers)))) best <- km
   }
 
   return(list(centroids = best$centers, clusters = best$cluster))

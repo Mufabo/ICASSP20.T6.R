@@ -1,10 +1,25 @@
-#' Title
+#' Creates three gaussian clusters with replacement outliers
 #'
-#' @param N_k
-#' @param epsilon
+#' @param N_k int. Number of samples in each cluster.
+#' @param epsilon scalar. Percentage of outliers
 #'
-#' @return
+#' @return list
+#' \enumerate{
+#' \item data matrxi[3*N_k, 2] Samples
+#' \item labels vector[N] Cluster memberships of the samples
+#' \item r int. Number of dimensions in generated data. Set to 2
+#' \item N int. Total number of samples. Set to 3*N_k
+#' \item K_true int. Number of clusters. Set to 3
+#' \item mu_true matrix[r, K_true] Cluster means
+#' \item scatter_true array[r, r, K_true] Cluster scatter matrices
+#' }
 #'
+#'
+#' @note
+#'
+#' "Robust M-Estimation based Bayesian Cluster Enumeration for Real Elliptically Symmetric Distributions"
+#' Christian A. Schroth and Michael Muma, Signal Processing Group, Technische UniversitÃ¤t Darmstadt
+#' submitted to IEEE Transactions on Signal Processing
 #' @examples
 #'
 #' @export
@@ -15,7 +30,7 @@ data_31 <- function(N_k, epsilon){
 
   mu_true <- matrix(c(0, 5, 5, 0, -5, 0), 2, 3)
 
-  scatter_true <- tensorA::to.tensor(0, c(r, r, K_true))
+  scatter_true <- array(0, c(r, r, K_true))
   scatter_true[,,1] <- c(2, .5, .5, .5)
   scatter_true[,,2] <- c(1, 0, 0, 0.1)
   scatter_true[,,3] <- c(2, -.5, -.5, .5)

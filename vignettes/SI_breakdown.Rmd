@@ -1,0 +1,225 @@
+---
+title: "SI_breakdown"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{SI_breakdown}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(ICASSP20.T6.R)
+library(foreach)
+library(doParallel)
+```
+
+# User Input
+
+```{r}
+# Percentage of replacement outliers
+epsilon <- seq(0, 0.35, 0.1)
+# Number of data points per cluster
+N_k <- 50
+# Monte Carlo iterations
+MC <- 10
+# Select combinations of EM and BIC to be simulated
+# 1: Gaussian, 2: t, 3: Huber, 4: Tukey
+em_bic <- matrix(c(1,1, 2,2, 2,4, 3,3, 3,4),5, 2, byrow = TRUE)
+# design parameter
+nu <- 3 # t
+qH <- 0.8 # Huber
+cT <- 4.685 # Tukey
+```
+
+# Data Generation
+
+```{r}
+embic_iter = nrow(em_bic)
+eps_iter <- length(epsilon)
+data <- array(0, c(N_k *3, 2, eps_iter, MC))
+
+for(iEpsilon in 1:eps_iter){
+  for(iMC in 1:MC){
+    tmp <- ICASSP20.T6.R::data_31(N_k, epsilon[iEpsilon])
+    data[,,iEpsilon, iMC] <- tmp$data
+    labels_true <- tmp$labels
+    r <- tmp$r
+    N <- tmp$N
+    K_true <- tmp$K_true
+    mu_true <- tmp$mu_true
+    S_true <- tmp$scatter_true
+  }
+}
+
+L_max <- 2*K_true # Search range
+```
+
+# Model Definitions
+
+```{r}
+cH <- sqrt(stats::qchisq(qH, r))
+bH <- stats::pchisq(cH^2, r+2) + cH^2/r*(1-stats::pchisq(cH^2, r))
+aH <- gamma(r/2)/pi^(r/2) / ( (2*bH)^(r/2)*(gamma(r/2) - pracma::incgam(r/2, cH^2/(2*bH))) + (2*bH*cH^2*exp(-cH^2/(2*bH)))/(cH^2 - bH * r))
+
+g <- list(gaus = function(t) g_gaus(t, r),
+        t = function(t) g_t(t, r, nu),
+      huber = function(t) g_huber(t, r, list(cH, bH, aH)))
+
+rho <- list(gaus = function(t) rho_gaus(t, r),
+        t = function(t) rho_t(t, r, nu),
+        huber = function(t) rho_huber(t, r, list(cH, bH, aH)),
+        tukey = function(t) rho_tukey(t, r, cT)
+        )
+
+psi <- list(gaus = function(t) psi_gaus(t),
+        t = function(t) psi_t(t, r, nu),
+        huber = function(t) psi_huber(t, r, list(cH, bH)),
+        tukey = function(t) psi_tukey(t, cT)
+        )
+
+eta <- list(gaus = function(t) eta_gaus(t),
+        t = function(t) eta_t(t, r, nu),
+        huber = function(t) eta_huber(t, r, list(cH, bH)),
+        tukey = function(t) eta_tukey(t, cT)
+        )
+
+bic_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
+like_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
+pen_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
+```
+
+# Cluster Enumeration
+
+```{r}
+#registerDoParallel()
+for(iEpsilon in 1:eps_iter){
+  #foreach(iMC=1:MC) %dopar% 
+  for(iMC in 1:MC){
+    bic <- array(0, c(L_max, 3, embic_iter))
+    pen <- array(0, c(L_max, 3, embic_iter))
+    like <- array(0, c(L_max, 3, embic_iter))
+    for(iEmBic in 1:embic_iter){
+      for(ll in 1:L_max){
+        # EM
+        tmp <- EM_RES(data[,,iEpsilon, iMC], ll, g[[em_bic[iEmBic, 1]]], psi[[em_bic[iEmBic, 1]]])
+        mu_est <- tmp$mu_hat
+        S_est <- tmp$S_hat
+        t <- tmp$t
+        R <- tmp$R
+        mem <- (R == apply(R, 1, max))
+        
+        # BIC
+        bicf <- BIC_F(data[,,iEpsilon,iMC], S_est, mu_est, t, mem, rho[[em_bic[iEmBic, 2]]], psi[[em_bic[iEmBic, 2]]], eta[[em_bic[iEmBic, 2]]])
+        bica <- BIC_A(S_est, t, mem, rho[[em_bic[iEmBic, 2]]], psi[[em_bic[iEmBic, 2]]], eta[[em_bic[iEmBic, 2]]])
+        bics <- BIC_S(S_est, t, mem , rho[[em_bic[iEmBic, 2]]])
+        
+        bic[ll,,iEmBic] <- c(bicf$bic, bica$bic, bics$bic)
+        like[ll,,iEmBic] <- c(bicf$like, bica$like, bics$like)
+        pen[ll,,iEmBic] <- c(bicf$pen, bica$pen, bics$pen)
+      }
+    }
+    bic_final[iMC, iEpsilon,,,] <- bic
+    like_final[iMC, iEpsilon,,,] <- like
+    pen_final[iMC, iEpsilon,,,] <- pen
+  }
+  print(epsilon[iEpsilon])
+}
+```
+
+# Evaluation
+```{r}
+
+p_under <- array(0, c(dim(bic_final)[4], eps_iter, embic_iter))
+p_det <- array(0, c(dim(bic_final)[4], eps_iter, embic_iter))
+p_over <- array(0, c(dim(bic_final)[4], eps_iter, embic_iter))
+
+for(iEmBic in 1:embic_iter){
+  for(iEpsilon in 1:eps_iter){
+    for(k in 1:dim(bic_final)[4]){
+      BICmax <- aperm(bic_final[,iEpsilon,,k,iEmBic, drop = FALSE]
+                       , c(1, 3, 4, 2, 5)) == apply(aperm(bic_final[,iEpsilon,,k,iEmBic, drop = FALSE], c(1,3,4,2,5)), 1, max )
+      
+      K_true_det <- pracma::repmat(c(K_true == 1:K_true, numeric(L_max-K_true) ), MC, 1) == 1
+      
+      K_true_under <- pracma::repmat(c(!(K_true == 1:(K_true-1)), numeric(L_max-K_true+1) ), MC, 1) == 1
+      
+      p_under[k, iEpsilon, iEmBic] <- sum(BICmax[K_true_under])/MC
+      p_det[k, iEpsilon, iEmBic] <- sum(BICmax[K_true_det])/MC
+      p_over[k, iEpsilon, iEmBic] <- 1 - p_det[k, iEpsilon, iEmBic] - p_under[k, iEpsilon, iEmBic]
+    }
+  }
+}
+```
+
+
+
+# Plots
+```{r}
+marker = c('o','s','d','*','x','^','v','>','<','p','h', '+', 'o')
+names = c("Finite", "Asymptotic", "Schwarz")
+g_names = c("Gaus", "t", "Huber", "Tukey")
+
+for(iEmBic in 1:embic_iter){
+graphics::matplot(epsilon, t(p_det[,,iEmBic]), lwd = 1.5, xlab = "% of outliers", ylab = "Probability of detection", pch=c("F", "A", "S"), type = 'b', col=1:3)
+graphics::title(paste("Nk:",toString(N_k),", EM: ", g_names[em_bic[iEmBic,1]]," BIC: ", g_names[em_bic[iEmBic,2]]))
+
+
+graphics::grid()
+graphics::legend("topleft", legend=names, lty=1:3, cex=0.8, col=1:3)
+
+}
+```
+```{r}
+names_all <- matrix("", embic_iter, 3)
+graphics::matplot(epsilon, t(p_det[,,1]), lwd = 1.5, xlab = "% of outliers", ylab = "Probability of detection", pch=c("F", "A", "S"), type = 'b', col=1:3)
+names_all[1,] <- paste("EM: "
+                           ,g_names[em_bic[1,1]]
+                           , ", BIC: "
+                           , g_names[em_bic[1,2]]
+                           , "-"
+                             ,names)  
+for(iEmBic in 2:embic_iter){
+  names_all[iEmBic,] <- paste("EM: "
+                             ,g_names[em_bic[iEmBic,1]]
+                             , ", BIC: "
+                             , g_names[em_bic[iEmBic,2]]
+                             , "-"
+                             ,names)
+
+  graphics::matlines(epsilon, t(p_det[,,iEmBic]), lwd = 1.5, xlab = "% of outliers", ylab = "Probability of detection", pch=c("F", "A", "S"), type = 'b', col=(1:3)*iEmBic)
+  
+  graphics::grid()
+
+  }
+graphics::title("N_k-50")
+graphics::plot.new()
+graphics::legend("center", legend=names_all, lty=1:3, cex=0.8, col=1:15)
+
+
+```
+
+```{r}
+names_3 <- paste("EM: ", g_names[em_bic[,1]], " , BIC: ", g_names[em_bic[,2]])
+
+
+for(iEmBic in 1:3){
+graphics::matplot(epsilon,
+                  p_det[iEmBic,,],
+                  lwd=1.5,
+                  xlab = "% of outliers",
+                  ylab = "Probability of detection",
+                  type="b")
+
+graphics::legend("topright", names_3)
+graphics::title(paste("N_k-", toString(N_k), ", BIC-", names[iEmBic]))
+
+}
+```
+

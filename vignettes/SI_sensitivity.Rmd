@@ -1,0 +1,309 @@
+---
+title: "SI_sensitivity"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{SI_sensitivity}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(ICASSP20.T6.R)
+library(zeallot)
+library(doParallel)
+```
+
+# User Input
+```{r}
+MC <- 5 # number of Monte Carlo iterations
+epsilon <- 0.04 # percantage of replacement outliers
+N_k <- 50 # Number of samples per cluster
+
+em_bic <- matrix(c(1,1, 2,2, 2,4, 3,3, 3,4),5, 2, byrow = TRUE)
+embic_iter = nrow(em_bic)
+nu <- 3 # t
+qH <- 0.8 # Huber
+cT <- 4.685 # Tukey
+
+out_range <- matrix(c(-20, -20, 20, 20), 2, 2) # range of outliers
+step_eps <- 10 # steps between outliers
+```
+
+# Data Generation
+```{r}
+x <- seq(out_range[1, 1], out_range[1, 2], step_eps)
+y <- seq(out_range[2, 1], out_range[2, 2], step_eps)
+c(X, Y) %<-% pracma::meshgrid(x, y)
+eps_iter <- length(x)^2
+
+data <- array(0, c(N_k*3,2,eps_iter,MC))
+for(ii_eps in 1:eps_iter){
+  for(ii_mc in 1:MC){
+
+    c(data[,,ii_eps, ii_mc], labels, r, N, K_true, mu_true, S_true) %<-% data_31(N_k, 0)
+    N_repl <- 1
+    index_repl <- pracma::randperm(N, N_repl)
+    data[index_repl, , ii_eps, ii_mc] <- c(X[ii_eps], Y[ii_eps])
+  }
+}
+
+L_max <- 2*K_true # search range
+```
+
+
+# Density Definitions
+```{r}
+cH <- sqrt(stats::qchisq(qH, r))
+bH <- stats::pchisq(cH^2, r+2) + cH^2/r*(1-stats::pchisq(cH^2, r))
+aH <- gamma(r/2)/pi^(r/2) / ( (2*bH)^(r/2)*(gamma(r/2) - pracma::incgam(r/2, cH^2/(2*bH))) + (2*bH*cH^2*exp(-cH^2/(2*bH)))/(cH^2 - bH * r))
+
+g <- list(gaus = function(t) g_gaus(t, r),
+        t = function(t) g_t(t, r, nu),
+      huber = function(t) g_huber(t, r, list(cH, bH, aH)))
+
+rho <- list(gaus = function(t) rho_gaus(t, 2),
+        t = function(t) rho_t(t, 2, nu),
+        huber = function(t) rho_huber(t, 2, list(cH, bH, aH)),
+        tukey = function(t) rho_tukey(t, 2, cT)
+        )
+
+psi <- list(gaus = function(t) psi_gaus(t),
+        t = function(t) psi_t(t, r, nu),
+        huber = function(t) psi_huber(t, 2, list(cH, bH)),
+        tukey = function(t) psi_tukey(t, cT)
+        )
+
+eta <- list(gaus = function(t) eta_gaus(t),
+        t = function(t) eta_t(t, 2, nu),
+        huber = function(t) eta_huber(t, 2, list(cH, bH)),
+        tukey = function(t) eta_tukey(t, cT)
+        )
+
+
+```
+
+# EM
+```{r}
+ICASSP20.T6.R::EM_RES
+ICASSP20.T6.R::kmeanspp
+for(gg in g) gg
+for(rr in rho) rr
+for(pp in psi) pp
+for(ee in eta) ee
+```
+
+```{r}
+numCores <- parallel::detectCores()
+cl <- makeCluster(numCores)
+registerDoParallel(cl)
+
+bic_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
+like_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
+pen_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
+
+zeallot::`%<-%`
+
+for(i_eps in 1:eps_iter){
+  bic <- array(0, c(L_max, 3, embic_iter))
+  pen <- array(0, c(L_max, 3, embic_iter))
+  like <- array(0, c(L_max, 3, embic_iter))
+  tmp <- foreach(i_mc = 1:MC) %dopar% {
+    for(iEmBic in 1:embic_iter){
+        for(ll in 1:L_max){
+          c(mu_est, S_est, t, R) zeallot::`%<-%` EM_RES(data[,,ii_eps, iMC], ll, g[[em_bic[iEmBic, 1]]], psi[[em_bic[iEmBic, 1]]])
+          mem <- (R == apply(R, 1, max))
+          
+          # BIC
+          bicf <- BIC_F(data[,,ii_eps,iMC], S_est, mu_est, t, mem, rho[[em_bic[iEmBic, 2]]], psi[[em_bic[iEmBic, 2]]], eta[[em_bic[iEmBic, 2]]])
+          bica <- BIC_A(S_est, t, mem, rho[[em_bic[iEmBic, 2]]], psi[[em_bic[iEmBic, 2]]], eta[[em_bic[iEmBic, 2]]])
+          bics <- BIC_S(S_est, t, mem , rho[[em_bic[iEmBic, 2]]])
+          
+          bic[ll,,iEmBic] <- c(bicf$bic, bica$bic, bics$bic)
+          like[ll,,iEmBic] <- c(bicf$like, bica$like, bics$like)
+          pen[ll,,iEmBic] <- c(bicf$pen, bica$pen, bics$pen)
+        }
+    }
+    return(list(bic, like, pen))
+  }
+}
+      
+    
+
+  
+for(i_eps in 1:eps_iter){
+  for(i_mc in 1:MC){
+    bic_final[i_mc, i_eps,,,] <- tmp[[i_eps]][[i_mc]]$bic
+    pen_final[i_mc, i_eps,,,] <- tmp[[i_eps]][[i_mc]]$pen
+    like_final[i_mc, i_eps,,,] <- tmp[[i_eps]][[i_mc]]$like
+ } 
+}
+parallel::stopCluster(cl)    
+```
+
+
+
+```{r}
+numCores <- parallel::detectCores()
+cl <- makeCluster(numCores)
+registerDoParallel(cl)
+
+tmp <- foreach(i_eps = 1:eps_iter, .packages = c('zeallot', 'ICASSP20.T6.R'), .export = c("r", "nu")) %:% 
+  foreach(i_mc = 1:MC, .export = c("r", "nu")) %dopar% {
+    devtools::load_all() # otherwise doesn't find EM_RES
+    cH <- sqrt(stats::qchisq(qH, r))
+    bH <- stats::pchisq(cH^2, r+2) + cH^2/r*(1-stats::pchisq(cH^2, r))
+    aH <- gamma(r/2)/pi^(r/2) / ( (2*bH)^(r/2)*(gamma(r/2) - pracma::incgam(r/2, cH^2/(2*bH))) + (2*bH*cH^2*exp(-cH^2/(2*bH)))/(cH^2 - bH * r))
+    
+    g <- list(gaus = function(t) g_gaus(t, r),
+            t = function(t) g_t(t, r, nu),
+          huber = function(t) g_huber(t, r, list(cH, bH, aH)))
+    
+    rho <- list(gaus = function(t) rho_gaus(t, 2),
+            t = function(t) rho_t(t, 2, nu),
+            huber = function(t) rho_huber(t, 2, list(cH, bH, aH)),
+            tukey = function(t) rho_tukey(t, 2, cT)
+            )
+    
+    psi <- list(gaus = function(t) psi_gaus(t),
+            t = function(t) psi_t(t, r, nu),
+            huber = function(t) psi_huber(t, 2, list(cH, bH)),
+            tukey = function(t) psi_tukey(t, cT)
+            )
+    
+    eta <- list(gaus = function(t) eta_gaus(t),
+            t = function(t) eta_t(t, 2, nu),
+            huber = function(t) eta_huber(t, 2, list(cH, bH)),
+            tukey = function(t) eta_tukey(t, cT)
+            )
+    bic <- array(0, c(L_max, 3, embic_iter))
+    pen <- array(0, c(L_max, 3, embic_iter))
+    like <- array(0, c(L_max, 3, embic_iter))
+  
+    for(iEmBic in 1:embic_iter){
+        for(ll in 1:L_max){
+          tryCatch(
+          c(mu_est, S_est, t, R) %<-% EM_RES(data[,,ii_eps, iMC], ll, g[[em_bic[iEmBic, 1]]], psi[[em_bic[iEmBic, 1]]]), error = function(e) browser())
+          print('works')
+          mem <- (R == apply(R, 1, max))
+          
+          # BIC
+          bicf <- BIC_F(data[,,ii_eps,iMC], S_est, mu_est, t, mem, rho[[em_bic[iEmBic, 2]]], psi[[em_bic[iEmBic, 2]]], eta[[em_bic[iEmBic, 2]]])
+          bica <- BIC_A(S_est, t, mem, rho[[em_bic[iEmBic, 2]]], psi[[em_bic[iEmBic, 2]]], eta[[em_bic[iEmBic, 2]]])
+          bics <- BIC_S(S_est, t, mem , rho[[em_bic[iEmBic, 2]]])
+          
+          bic[ll,,iEmBic] <- c(bicf$bic, bica$bic, bics$bic)
+          like[ll,,iEmBic] <- c(bicf$like, bica$like, bics$like)
+          pen[ll,,iEmBic] <- c(bicf$pen, bica$pen, bics$pen)
+        }
+      }
+      
+      return(list(bic=bic, like=like , pen=pen))
+      }
+      
+    
+bic_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
+like_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
+pen_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
+  
+for(i_eps in 1:eps_iter){
+  for(i_mc in 1:MC){
+    bic_final[i_mc, i_eps,,,] <- tmp[[i_eps]][[i_mc]]$bic
+    pen_final[i_mc, i_eps,,,] <- tmp[[i_eps]][[i_mc]]$pen
+    like_final[i_mc, i_eps,,,] <- tmp[[i_eps]][[i_mc]]$like
+ } 
+}
+parallel::stopCluster(cl)    
+```
+
+
+```{r}
+bic_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
+like_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
+pen_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
+  
+for(i_eps in 1:eps_iter){
+  for(i_mc in 1:MC) {
+    
+    bic <- array(0, c(L_max, 3, embic_iter))
+    pen <- array(0, c(L_max, 3, embic_iter))
+    like <- array(0, c(L_max, 3, embic_iter))
+  
+    for(iEmBic in 1:embic_iter){
+        for(ll in 1:L_max){
+          c(mu_est, S_est, t, R) %<-% EM_RES(data[,,ii_eps, iMC], ll, g[[em_bic[iEmBic, 1]]], psi[[em_bic[iEmBic, 1]]])
+          mem <- (R == apply(R, 1, max))
+          
+          # BIC
+          bicf <- BIC_F(data[,,ii_eps,iMC], S_est, mu_est, t, mem, rho[[em_bic[iEmBic, 2]]], psi[[em_bic[iEmBic, 2]]], eta[[em_bic[iEmBic, 2]]])
+          bica <- BIC_A(S_est, t, mem, rho[[em_bic[iEmBic, 2]]], psi[[em_bic[iEmBic, 2]]], eta[[em_bic[iEmBic, 2]]])
+          bics <- BIC_S(S_est, t, mem , rho[[em_bic[iEmBic, 2]]])
+          
+          bic[ll,,iEmBic] <- c(bicf$bic, bica$bic, bics$bic)
+          like[ll,,iEmBic] <- c(bicf$like, bica$like, bics$like)
+          pen[ll,,iEmBic] <- c(bicf$pen, bica$pen, bics$pen)
+        }
+    }
+    bic_final[i_mc, i_eps,,,] <- bic
+    pen_final[i_mc, i_eps,,,] <- pen
+    like_final[i_mc, i_eps,,,] <- like 
+  }
+}
+```
+
+
+# Evaluation
+```{r}
+p_under <- array(0, c(dim(bic_final)[4], eps_iter, embic_iter))
+p_det <- array(0, c(dim(bic_final)[4], eps_iter, embic_iter))
+p_over <- array(0, c(dim(bic_final)[4], eps_iter, embic_iter))
+
+for(iEmBic in 1:embic_iter){
+  for(iEpsilon in 1:eps_iter){
+    for(k in 1:dim(bic_final)[4]){
+      BICmax <- aperm(bic_final[,iEpsilon,,k,iEmBic, drop = FALSE]
+                       , c(1, 3, 4, 2, 5)) == apply(aperm(bic_final[,iEpsilon,,k,iEmBic, drop = FALSE], c(1,3,4,2,5)), 1, max )
+      
+      K_true_det <- pracma::repmat(c(K_true == 1:K_true, numeric(L_max-K_true) ), MC, 1) == 1
+      
+      K_true_under <- pracma::repmat(c(!(K_true == 1:(K_true-1)), numeric(L_max-K_true+1) ), MC, 1) == 1
+      
+      p_under[k, iEpsilon, iEmBic] <- sum(BICmax[K_true_under])/MC
+      p_det[k, iEpsilon, iEmBic] <- sum(BICmax[K_true_det])/MC
+      p_over[k, iEpsilon, iEmBic] <- 1 - p_det[k, iEpsilon, iEmBic] - p_under[k, iEpsilon, iEmBic]
+    }
+  }
+}
+```
+
+
+# Plot
+
+```{r}
+names = c("Finite", "Asymptotic", "Schwarz")
+g_names = c("Gaus", "t", "Huber", "Tukey")
+
+p_det_2 <- aperm(p_det, c(2,1,3))
+
+c(data2, labels, r, N, K_true, mu_true, S_true) %<-% data_31(N_k, 0)
+
+for(iEmBic in 1: embic_iter){
+  for(k_bic in 1:dim(bic_final)[4]){
+    plot_scatter(cbind(labels, data2), K_true, r)
+    Z <- reshape(p_det_2[, k_bic, iEmBic], dim(X)[1], dim(X)[2])
+    graphics::contour(x, y, t(Z), add=TRUE, col = grDevices::rainbow(12))
+    graphics::title(paste("EM-", g_names[[em_bic[iEmBic, 1]]], ", BIC-", g_names[[em_bic[iEmBic, 2]]], names[k_bic]))
+    
+    par(mar=c(5,1,5,2.5))
+    image(y=2:30,z=t(2:30), col=color[2:12], axes=FALSE, main="Slope", cex.main=.8)
+    axis(4,cex.axis=0.8,mgp=c(0,.5,0))
+  }
+}
+```
+
