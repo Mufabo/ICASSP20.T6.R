@@ -1,13 +1,13 @@
 Package: ICASSP20.T6.R
-Title: What the Package Does (One Line, Title Case)
+Title: ICASSP20.T6.R
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "M. Fatih",
+           family = "Bostanci",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
+           email = "fatih.bostanci@hotmail.de",
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+Description: R code for tutorial 6 at ICASSP 2020.
 License: MIT
 Encoding: UTF-8
 LazyData: true
@@ -17,5 +17,15 @@ Suggests:
     testthat (>= 2.1.0),
     knitr,
     rmarkdown
+Imports:
+    comprehenr,
+    pracma,
+    zeallot,
+    LICORS,
+    amap,
+    stats,
+    graphics,
+    grDevices,
+    Rfast
 RoxygenNote: 6.1.1
 VignetteBuilder: knitr
