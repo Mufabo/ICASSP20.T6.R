@@ -5,8 +5,7 @@ This package provides the Python Code for the paper "Robust M-Estimation based B
 Run the following in a R console.
 ```r
 install.packages("devtools")
-devtools::install_github(" Mufabo /
-ICASSP20.T6.R ")
+devtools::install_github("Mufabo/ICASSP20.T6.R ")
 ```
 
 
