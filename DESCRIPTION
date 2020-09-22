@@ -28,6 +28,7 @@ Imports:
     grDevices,
     Rfast,
     foreach,
-    doParallel
+    doParallel,
+    parallel
 RoxygenNote: 6.1.1
 VignetteBuilder: knitr
