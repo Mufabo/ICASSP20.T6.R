@@ -37,7 +37,7 @@ matSum <- function(tensor){
 kmeanspp <- function(data, ll, iter = 25, rep = 50){
   best <- NULL
   for(i in 1:rep){
-    set.seed(123)
+    #set.seed(123)
     init_centers <- LICORS::kmeanspp(data, k= ll)
     km <- amap::Kmeans(data, init_centers$centers, method="manhattan")
     # To avoid empty cluster, only accept solutions where each cluster has

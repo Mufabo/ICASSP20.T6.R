@@ -218,7 +218,7 @@ graphics::matplot(epsilon,
                   type="b")
 
 graphics::legend("topright", names_3)
-graphics::title(paste("N_k-", toString(N_k), ", BIC-", names[iEmBic]))
+graphics::title(paste("N_k-", toString(N_k), ", BIC-", names[iEmBic]), lty=1:5, col=1:5)
 
 }
 ```

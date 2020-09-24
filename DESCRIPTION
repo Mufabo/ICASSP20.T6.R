@@ -8,7 +8,7 @@ Authors@R:
            email = "fatih.bostanci@hotmail.de",
            comment = c(ORCID = "YOUR-ORCID-ID"))
 Description: R code for tutorial 6 at ICASSP 2020.
-License: MIT
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
 URL: https://github.com/Mufabo/ICASSP20.T6.R
