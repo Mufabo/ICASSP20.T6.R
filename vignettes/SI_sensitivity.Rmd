@@ -94,8 +94,8 @@ bic_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
 like_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
 pen_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
 
-for(i_eps in 1:eps_iter){
-  for(iMC in 1:MC) {
+for(iMC in 1:MC) {
+  for(ii_eps in 1:eps_iter){
     for(iEmBic in 1:embic_iter){
         for(ll in 1:L_max){
           c(mu_est, S_est, t, R) %<-% EM_RES(data[,,ii_eps, iMC], ll, g[[em_bic[iEmBic, 1]]], psi[[em_bic[iEmBic, 1]]])
