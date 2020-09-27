@@ -43,7 +43,7 @@ EM_RES <- function(data, ll, g, psi, limit = 1e-6, em_max_iter = 200, reg_value 
 
   ## Initialization using K-means++
   if (is.null(test_args)){
-    tmp <- ICASSP20.T6.R::kmeanspp(data, ll)
+    tmp <- my_kmeanspp(data, ll)
     clu_memb_kmeans <- tmp$clusters
     mu_Kmeans <- tmp$centroids
     mu_hat <- t(mu_Kmeans) #stores centroids in columns

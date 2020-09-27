@@ -31,10 +31,9 @@ matSum <- function(tensor){
 #' \item centroids matrix. Cluster centers
 #' \item clusters vector. Cluster membership of data samples
 #' }
-#' @export
 #'
-#' @examples
-kmeanspp <- function(data, ll, iter = 25, rep = 50){
+#' @export
+my_kmeanspp <- function(data, ll, iter = 25, rep = 50){
   best <- NULL
   for(i in 1:rep){
     #set.seed(123)

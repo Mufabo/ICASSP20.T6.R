@@ -33,7 +33,7 @@ nearestSPD <- function(A){
   k <- 0
   while(!p){
     vals <- eigen(Ahat)$values
-    p <- all(vals > 0)
+    p <- all(vals >= 0)
     k <- k + 1
     if(!p){
       mineig <- min(vals)

@@ -15,13 +15,14 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
+
 library(ICASSP20.T6.R)
 library(zeallot)
+library(parallel)
 library(doParallel)
-```
+library(foreach)
 
-# User Input
-```{r}
+# User Data
 MC <- 5 # number of Monte Carlo iterations
 epsilon <- 0.04 # percantage of replacement outliers
 N_k <- 50 # Number of samples per cluster
@@ -33,12 +34,9 @@ qH <- 0.8 # Huber
 cT <- 4.685 # Tukey
 
 out_range <- matrix(c(-20, -20, 20, 20), 2, 2) # range of outliers
-step_eps <- 10 # steps between outliers
-set.seed(123)
-```
+step_eps <- 20 #10 # steps between outliers
 
 # Data Generation
-```{r}
 x <- seq(out_range[1, 1], out_range[1, 2], step_eps)
 y <- seq(out_range[2, 1], out_range[2, 2], step_eps)
 c(X, Y) %<-% pracma::meshgrid(x, y)
@@ -51,17 +49,11 @@ for(ii_eps in 1:eps_iter){
     c(data[,,ii_eps, ii_mc], labels, r, N, K_true, mu_true, S_true) %<-% data_31(N_k, 0)
     N_repl <- 1
     index_repl <- pracma::randperm(N, N_repl)
-    
     data[index_repl, , ii_eps, ii_mc] <- c(X[ii_eps], Y[ii_eps])
   }
 }
 
 L_max <- 2*K_true # search range
-```
-
-
-# Density Definitions
-```{r}
 
 # Huber Parameters
 cH <- sqrt(stats::qchisq(qH, r))
@@ -70,7 +62,7 @@ aH <- gamma(r/2)/pi^(r/2) / ( (2*bH)^(r/2)*(gamma(r/2) - pracma::incgam(r/2, cH^
 
 g <- list(gaus = function(t) g_gaus(t, r),
         t = function(t) g_t(t, r, nu),
-      huber = function(t) g_huber(t, r, list(cH, bH, aH)))
+        huber = function(t) g_huber(t, r, list(cH, bH, aH)))
 
 rho <- list(gaus = function(t) rho_gaus(t, r),
         t = function(t) rho_t(t, r, nu),
@@ -90,35 +82,51 @@ eta <- list(gaus = function(t) eta_gaus(t),
         tukey = function(t) eta_tukey(t, cT)
         )
 
+
 bic_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
 like_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
 pen_final <- array(0, c(MC, eps_iter, L_max, 3, embic_iter))
 
-for(iMC in 1:MC) {
-  for(ii_eps in 1:eps_iter){
+num_cl <- parallel::detectCores()
+cl <- parallel::makeCluster(num_cl)
+start_time <- Sys.time()
+
+for(ii_eps in 8:eps_iter){
+  # tmp: List(List(bic_1,...),...,List(bic_5,...))
+  tmp <- foreach(iMC = 1:MC) %dopar% {
+    bic <- array(0, c(L_max, 3, embic_iter))
+    like <- array(0, c(L_max, 3, embic_iter))
+    pen <- array(0, c(L_max, 3, embic_iter))
     for(iEmBic in 1:embic_iter){
         for(ll in 1:L_max){
           c(mu_est, S_est, t, R) %<-% EM_RES(data[,,ii_eps, iMC], ll, g[[em_bic[iEmBic, 1]]], psi[[em_bic[iEmBic, 1]]])
           
           mem <- (R == apply(R, 1, max))
           
-          # BIC
-          bicf <- BIC_F(data[,,ii_eps,iMC], S_est, mu_est, t, mem, rho[[em_bic[iEmBic, 2]]], psi[[em_bic[iEmBic, 2]]], eta[[em_bic[iEmBic, 2]]])
-          bica <- BIC_A(S_est, t, mem, rho[[em_bic[iEmBic, 2]]], psi[[em_bic[iEmBic, 2]]], eta[[em_bic[iEmBic, 2]]])
-          bics <- BIC_S(S_est, t, mem , rho[[em_bic[iEmBic, 2]]])
+          c(bic[ll, 1, iEmBic], pen[ll, 1, iEmBic], like[ll, 1, iEmBic]) %<-% BIC_F(data[,,ii_eps,iMC], S_est, mu_est, t, mem, rho[[em_bic[iEmBic, 2]]], psi[[em_bic[iEmBic, 2]]], eta[[em_bic[iEmBic, 2]]])
+          c(bic[ll, 2, iEmBic], pen[ll, 2, iEmBic], like[ll, 2, iEmBic]) %<-% BIC_A(S_est, t, mem, rho[[em_bic[iEmBic, 2]]], psi[[em_bic[iEmBic, 2]]], eta[[em_bic[iEmBic, 2]]])
+          c(bic[ll, 3, iEmBic], pen[ll, 3, iEmBic], like[ll, 3, iEmBic]) %<-% BIC_S(S_est, t, mem , rho[[em_bic[iEmBic, 2]]])
           
-          bic_final[iMC, i_eps, ll, ,iEmBic] <- c(bicf$bic, bica$bic, bics$bic)
-          like_final[iMC, i_eps, ll, ,iEmBic] <- c(bicf$like, bica$like, bics$like)
-          pen_final[iMC, i_eps, ll, ,iEmBic] <- c(bicf$pen, bica$pen, bics$pen)
         }
     }
-  } 
-}    
+    print(c(ii_eps, iMC, Sys.time()-start_time))
+    return(list(bic=bic, like=like, pen=pen)) 
+  }
+  for(i in 1:MC){
+    bic_final[i, ii_eps,,,] <- tmp[[i]]$bic
+    pen_final[i, ii_eps,,,] <- tmp[[i]]$pen
+    like_final[i, ii_eps,,,] <- tmp[[i]]$like
+  }
+  
+}  
+
+
 ```
 
 # Evaluation and Plot
 ```{r}
   #####
+parallel::stopCluster(cl)
   p_under <- array(0, c(dim(bic_final)[4], eps_iter, embic_iter))
   p_det <- array(0, c(dim(bic_final)[4], eps_iter, embic_iter))
   p_over <- array(0, c(dim(bic_final)[4], eps_iter, embic_iter))
