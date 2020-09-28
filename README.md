@@ -1,4 +1,4 @@
-This package provides the Python Code for the paper "Robust M-Estimation based Bayesian Cluster Enumeration for Real Elliptically Symmetric Distributions" by Christian A. Schroth and Michael Muma. The theory can be found in http://arxiv.org/abs/2005.01404.
+This package provides the R Code for the paper "Robust M-Estimation based Bayesian Cluster Enumeration for Real Elliptically Symmetric Distributions" by Christian A. Schroth and Michael Muma. The theory can be found in http://arxiv.org/abs/2005.01404.
 
 # Installation
 
